@@ -125,6 +125,69 @@ export const articlesApi = {
   },
 };
 
+export interface DigestPick {
+  position: number;
+  whyItMatters?: string;
+  article: Article;
+}
+
+export interface Digest {
+  id: string;
+  digestDate: string; // ISO date
+  title: string;
+  summaryText?: string;
+  articleCount: number;
+  picks: DigestPick[];
+}
+
+interface DigestPickApiResponse {
+  position: number;
+  why_it_matters: string | null;
+  article: ArticleApiResponse;
+}
+
+interface DigestApiResponse {
+  id: string;
+  digest_date: string;
+  title: string;
+  summary_text: string | null;
+  article_count: number;
+  created_at: string;
+  picks: DigestPickApiResponse[];
+}
+
+function mapApiDigest(d: DigestApiResponse): Digest {
+  return {
+    id: d.id,
+    digestDate: d.digest_date,
+    title: d.title,
+    summaryText: d.summary_text ?? undefined,
+    articleCount: d.article_count,
+    picks: d.picks.map((p) => ({
+      position: p.position,
+      whyItMatters: p.why_it_matters ?? undefined,
+      article: mapApiArticle(p.article),
+    })),
+  };
+}
+
+export const digestApi = {
+  async today(): Promise<Digest | null> {
+    const data = await request<DigestApiResponse | null>(`/api/digest/today`);
+    return data ? mapApiDigest(data) : null;
+  },
+  async generate(force = false): Promise<{
+    status: string;
+    digest_id?: string;
+    digest_date?: string;
+    pick_count?: number;
+    candidate_count?: number;
+  }> {
+    const qs = force ? "?force=true" : "";
+    return request(`/api/digest/generate${qs}`, { method: "POST" });
+  },
+};
+
 export const ingestApi = {
   async run(maxMessages = 25): Promise<{
     fetched: number;

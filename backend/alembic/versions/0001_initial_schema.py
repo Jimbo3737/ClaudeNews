@@ -172,6 +172,28 @@ def upgrade() -> None:
     )
 
     op.create_table(
+        "digest_articles",
+        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
+        sa.Column(
+            "digest_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("digests.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
+        sa.Column(
+            "article_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("articles.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
+        sa.Column("position", sa.Integer(), nullable=False),
+        sa.Column("why_it_matters", sa.Text(), nullable=True),
+        sa.Column("created_at", sa.DateTime(), nullable=False),
+        sa.UniqueConstraint("digest_id", "article_id", name="uq_digest_articles_digest_article"),
+        sa.UniqueConstraint("digest_id", "position", name="uq_digest_articles_digest_position"),
+    )
+
+    op.create_table(
         "digest_episodes",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column(
@@ -207,6 +229,7 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_table("oauth_tokens")
     op.drop_table("digest_episodes")
+    op.drop_table("digest_articles")
     op.drop_table("digests")
     op.drop_table("library_items")
     op.drop_table("bookmarks")

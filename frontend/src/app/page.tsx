@@ -17,6 +17,7 @@ import { ArticleListRow } from "@/components/ArticleListRow";
 import { ReaderPane } from "@/components/ReaderPane";
 import { DemoBanner } from "@/components/DemoBanner";
 import { useArticles } from "@/lib/use-articles";
+import { useDigest } from "@/lib/use-digest";
 import { articlesApi } from "@/lib/api";
 import {
   MOCK_LIBRARY,
@@ -26,6 +27,7 @@ import {
 
 export default function TodayPage() {
   const { articles, setArticles, isDemo } = useArticles({ limit: 50 });
+  const { digest } = useDigest();
   const [selected, setSelected] = useState<Article | null>(null);
 
   const today = new Date().toLocaleDateString("en-GB", {
@@ -34,9 +36,17 @@ export default function TodayPage() {
     month: "long",
   });
 
-  const briefIds = new Set(TODAY_BRIEF_IDS);
-  const brief = articles.filter((a) => briefIds.has(a.id));
-  const inFeeds = articles.filter((a) => !briefIds.has(a.id) && !a.isRead).slice(0, 6);
+  // If today's digest exists, use its picks (with the digest-specific framing
+  // overlaid on each article). Otherwise fall back to the mock TODAY_BRIEF_IDS
+  // pick set so the design pass still has something to render.
+  const brief: Article[] = digest
+    ? digest.picks.map((p) => ({
+        ...p.article,
+        whyItMatters: p.whyItMatters ?? p.article.whyItMatters,
+      }))
+    : articles.filter((a) => new Set(TODAY_BRIEF_IDS).has(a.id));
+  const briefIdSet = new Set(brief.map((a) => a.id));
+  const inFeeds = articles.filter((a) => !briefIdSet.has(a.id) && !a.isRead).slice(0, 6);
   const continueReading = articles.filter(
     (a) => a.readProgress !== undefined && a.readProgress > 0 && a.readProgress < 1
   );
@@ -79,26 +89,32 @@ export default function TodayPage() {
             {/* Brief — AI-curated picks */}
             <section>
               <SectionHeader
-                title="Your brief"
-                subtitle={`${brief.length} things worth your attention this morning`}
+                title={digest?.title ?? "Your brief"}
+                subtitle={
+                  brief.length === 0
+                    ? "No brief yet — sync your inbox to generate today's"
+                    : `${brief.length} things worth your attention this morning`
+                }
                 icon={Sparkles}
                 accent
               />
-              <div
-                className="rounded-2xl border overflow-hidden"
-                style={{ background: "var(--surface)", borderColor: "var(--border)" }}
-              >
-                {brief.map((a, i) => (
-                  <BriefRow
-                    key={a.id}
-                    article={a}
-                    index={i + 1}
-                    onClick={open}
-                    onSave={toggleSave}
-                    isLast={i === brief.length - 1}
-                  />
-                ))}
-              </div>
+              {brief.length > 0 && (
+                <div
+                  className="rounded-2xl border overflow-hidden"
+                  style={{ background: "var(--surface)", borderColor: "var(--border)" }}
+                >
+                  {brief.map((a, i) => (
+                    <BriefRow
+                      key={a.id}
+                      article={a}
+                      index={i + 1}
+                      onClick={open}
+                      onSave={toggleSave}
+                      isLast={i === brief.length - 1}
+                    />
+                  ))}
+                </div>
+              )}
             </section>
 
             {/* In your feeds */}

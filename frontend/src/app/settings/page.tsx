@@ -2,9 +2,9 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Mail, Mic, BookOpen, CheckCircle2, RefreshCw } from "lucide-react";
+import { Mail, Mic, BookOpen, CheckCircle2, RefreshCw, Sparkles } from "lucide-react";
 import { TopBar } from "@/components/TopBar";
-import { authApi, ingestApi } from "@/lib/api";
+import { authApi, digestApi, ingestApi } from "@/lib/api";
 
 interface GmailStatus {
   connected: boolean;
@@ -30,6 +30,8 @@ function SettingsContent() {
   const [unreachable, setUnreachable] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
+  const [generatingDigest, setGeneratingDigest] = useState(false);
+  const [digestResult, setDigestResult] = useState<string | null>(null);
 
   useEffect(() => {
     refresh();
@@ -66,6 +68,27 @@ function SettingsContent() {
       setSyncResult(`Sync failed: ${(err as Error).message}`);
     } finally {
       setSyncing(false);
+    }
+  }
+
+  async function generateDigest(force = false) {
+    setGeneratingDigest(true);
+    setDigestResult(null);
+    try {
+      const r = await digestApi.generate(force);
+      if (r.status === "no_candidates") {
+        setDigestResult("No articles in the last 36 hours — sync your inbox first.");
+      } else if (r.status === "ready") {
+        setDigestResult(
+          `Today's brief is ready: ${r.pick_count} pick${r.pick_count === 1 ? "" : "s"} from ${r.candidate_count} candidates.`
+        );
+      } else {
+        setDigestResult(`Status: ${r.status}`);
+      }
+    } catch (err) {
+      setDigestResult(`Generation failed: ${(err as Error).message}`);
+    } finally {
+      setGeneratingDigest(false);
     }
   }
 
@@ -207,16 +230,63 @@ function SettingsContent() {
             description="A short brief of the day's most relevant articles, also delivered as a private podcast."
           >
             <Card>
-              <Field label="Generate at" value="07:00 local" />
-              <Field label="Number of stories" value="5" />
-              <Field label="Voice" value="OpenAI · Onyx" />
-              <Field label="Episode length cap" value="~8 min" />
-              <p
-                className="text-xs mt-3"
-                style={{ color: "var(--text-secondary)" }}
+              <div className="flex items-start gap-3">
+                <div
+                  className="w-9 h-9 rounded-lg shrink-0 flex items-center justify-center"
+                  style={{ background: "var(--surface-raised)" }}
+                >
+                  <Sparkles size={16} style={{ color: "var(--accent)" }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold">Today&apos;s brief</p>
+                  <p
+                    className="text-xs mt-0.5"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
+                    Generate text now; podcast pipeline lands next.
+                  </p>
+                  {digestResult && (
+                    <p
+                      className="text-xs mt-2"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
+                      {digestResult}
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => generateDigest(false)}
+                    disabled={generatingDigest || unreachable}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-40"
+                    style={{ background: "var(--accent)", color: "#fff" }}
+                  >
+                    <RefreshCw size={13} className={generatingDigest ? "animate-spin" : ""} />
+                    {generatingDigest ? "Generating…" : "Generate"}
+                  </button>
+                  <button
+                    onClick={() => generateDigest(true)}
+                    disabled={generatingDigest || unreachable}
+                    className="px-3 py-1.5 rounded-lg text-sm hover:opacity-90 disabled:opacity-40"
+                    style={{
+                      background: "var(--surface-raised)",
+                      color: "var(--text-primary)",
+                    }}
+                    title="Force regeneration even if today's digest already exists"
+                  >
+                    Regenerate
+                  </button>
+                </div>
+              </div>
+              <div
+                className="mt-4 pt-4 border-t"
+                style={{ borderColor: "var(--border)" }}
               >
-                Wiring this up is the next phase — text digest first, podcast second.
-              </p>
+                <Field label="Generate at" value="07:00 local (manual for now)" />
+                <Field label="Number of stories" value="3–5" />
+                <Field label="Voice" value="OpenAI · Onyx (not wired)" />
+                <Field label="Episode length cap" value="~8 min" />
+              </div>
             </Card>
           </Section>
 
