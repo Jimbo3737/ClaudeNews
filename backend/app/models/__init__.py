@@ -5,6 +5,7 @@ from .library import LibraryItem, LibraryType, LibraryStatus
 from .bookmark import Bookmark
 from .digest import Digest, DigestEpisode
 from .tag import Tag, article_tags
+from .oauth_token import OAuthToken
 
 __all__ = [
     "Article", "ArticleStatus",
@@ -14,4 +15,5 @@ __all__ = [
     "Bookmark",
     "Digest", "DigestEpisode",
     "Tag", "article_tags",
+    "OAuthToken",
 ]
