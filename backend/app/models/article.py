@@ -33,6 +33,7 @@ class Article(Base):
     raw_html: Mapped[str | None] = mapped_column(Text)
     clean_text: Mapped[str | None] = mapped_column(Text)
     summary: Mapped[str | None] = mapped_column(Text)
+    why_it_matters: Mapped[str | None] = mapped_column(Text)
 
     read_time_minutes: Mapped[int | None] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String(16), default=ArticleStatus.unread, nullable=False)

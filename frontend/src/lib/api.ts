@@ -33,6 +33,7 @@ interface ArticleApiResponse {
   author: string | null;
   image_url: string | null;
   summary: string | null;
+  why_it_matters: string | null;
   read_time_minutes: number | null;
   status: string;
   is_saved: boolean;
@@ -53,6 +54,7 @@ function mapApiArticle(a: ArticleApiResponse): Article {
     source: a.source ?? "Unknown source",
     sourceKind,
     summary: a.summary ?? undefined,
+    whyItMatters: a.why_it_matters ?? undefined,
     imageUrl: a.image_url ?? undefined,
     url: a.url,
     publishedAt: relativeTime(a.published_at ?? a.created_at),
@@ -124,7 +126,13 @@ export const articlesApi = {
 };
 
 export const ingestApi = {
-  async run(maxMessages = 25): Promise<{ fetched: number; inserted: number; skipped_duplicate: number; skipped_empty: number }> {
+  async run(maxMessages = 25): Promise<{
+    fetched: number;
+    inserted: number;
+    skipped_duplicate: number;
+    skipped_empty: number;
+    summarised: number;
+  }> {
     return request(`/api/ingest/run?max_messages=${maxMessages}`, { method: "POST" });
   },
 };

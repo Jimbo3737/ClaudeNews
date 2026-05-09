@@ -19,6 +19,7 @@ class ArticleOut(BaseModel):
     author: str | None
     image_url: str | None
     summary: str | None
+    why_it_matters: str | None
     read_time_minutes: int | None
     status: str
     is_saved: bool
@@ -38,6 +39,7 @@ def _serialize(a: Article) -> ArticleOut:
         author=a.author,
         image_url=a.image_url,
         summary=a.summary,
+        why_it_matters=a.why_it_matters,
         read_time_minutes=a.read_time_minutes,
         status=a.status,
         is_saved=a.is_saved,

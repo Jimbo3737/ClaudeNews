@@ -22,4 +22,5 @@ async def run_ingest(max_messages: int = 25, db: AsyncSession = Depends(get_db))
         "inserted": result.inserted,
         "skipped_duplicate": result.skipped_duplicate,
         "skipped_empty": result.skipped_empty,
+        "summarised": result.summarised,
     }

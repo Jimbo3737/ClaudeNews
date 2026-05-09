@@ -56,6 +56,7 @@ function SettingsContent() {
       const r = await ingestApi.run(50);
       setSyncResult(
         `Fetched ${r.fetched}, added ${r.inserted} new` +
+          (r.summarised ? ` (${r.summarised} summarised)` : "") +
           (r.skipped_duplicate ? `, skipped ${r.skipped_duplicate} duplicate` : "") +
           (r.skipped_empty ? `, skipped ${r.skipped_empty} empty` : "") +
           "."

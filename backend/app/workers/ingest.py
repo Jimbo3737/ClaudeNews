@@ -1,12 +1,14 @@
 """Newsletter ingest worker.
 
 Fetches recent Gmail messages, parses each as a newsletter article, dedupes by
-Gmail message id, creates a `Source` row per sender, and persists an `Article`
-record. Run via the `/api/ingest/run` endpoint for now; later this becomes an
-RQ task on a periodic schedule.
+Gmail message id, creates a `Source` row per sender, runs a per-article AI
+summary in parallel, and persists an `Article` record. Run via the
+`/api/ingest/run` endpoint for now; later this becomes an RQ task on a
+periodic schedule.
 """
 from __future__ import annotations
 
+import asyncio
 import re
 from dataclasses import dataclass
 from datetime import datetime
@@ -19,7 +21,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.article import Article, ArticleStatus
 from app.models.oauth_token import OAuthToken
 from app.models.source import Source, SourceType
+from app.models.tag import Tag
 from app.routers.auth import load_google_credentials
+from app.services.ai_summary import ArticleSummary, SummaryInput, summarize_article
 from app.services.gmail_client import GmailClient, GmailMessage
 
 EXTERNAL_SOURCE = "gmail"
@@ -32,6 +36,7 @@ class IngestResult:
     inserted: int
     skipped_duplicate: int
     skipped_empty: int
+    summarised: int
 
 
 async def ingest_recent(db: AsyncSession, max_messages: int = 25) -> IngestResult:
@@ -42,20 +47,53 @@ async def ingest_recent(db: AsyncSession, max_messages: int = 25) -> IngestResul
     client = GmailClient(creds)
     message_ids = client.list_recent_message_ids(max_results=max_messages)
 
-    result = IngestResult(fetched=len(message_ids), inserted=0, skipped_duplicate=0, skipped_empty=0)
+    result = IngestResult(
+        fetched=len(message_ids),
+        inserted=0,
+        skipped_duplicate=0,
+        skipped_empty=0,
+        summarised=0,
+    )
 
+    # Pass 1: filter out duplicates and empty messages, fetch full bodies.
+    new_messages: list[GmailMessage] = []
     for msg_id in message_ids:
         if await _already_ingested(db, msg_id):
             result.skipped_duplicate += 1
             continue
-
         msg = client.get_message(msg_id)
         if not msg.html and not msg.text:
             result.skipped_empty += 1
             continue
+        new_messages.append(msg)
 
+    # Pass 2: run AI summaries concurrently (one Anthropic call per article).
+    summaries: list[ArticleSummary | None] = []
+    if new_messages:
+        summary_inputs = [
+            SummaryInput(
+                title=msg.subject,
+                source=msg.sender_name or msg.sender_email or "Unknown",
+                html=msg.html,
+                text=msg.text,
+            )
+            for msg in new_messages
+        ]
+        summaries = await asyncio.gather(
+            *(summarize_article(s) for s in summary_inputs)
+        )
+
+    # Pass 3: persist articles + tags.
+    for msg, summary in zip(new_messages, summaries):
         source = await _get_or_create_source(db, msg.sender_name, msg.sender_email)
         article = _build_article(msg, source.id)
+        if summary is not None:
+            article.summary = summary.summary or article.summary
+            article.why_it_matters = summary.why_it_matters or None
+            for tag_name in summary.suggested_tags:
+                tag = await _get_or_create_tag(db, tag_name)
+                article.tags.append(tag)
+            result.summarised += 1
         db.add(article)
         result.inserted += 1
 
@@ -68,6 +106,20 @@ async def ingest_recent(db: AsyncSession, max_messages: int = 25) -> IngestResul
 
     await db.commit()
     return result
+
+
+async def _get_or_create_tag(db: AsyncSession, raw_name: str) -> Tag:
+    """Look up a tag by case-insensitive name; create it (with the original casing) if missing."""
+    name = raw_name.strip()
+    found = (
+        await db.execute(select(Tag).where(Tag.name.ilike(name)))
+    ).scalar_one_or_none()
+    if found is not None:
+        return found
+    tag = Tag(name=name[:64])
+    db.add(tag)
+    await db.flush()
+    return tag
 
 
 async def _already_ingested(db: AsyncSession, gmail_message_id: str) -> bool:

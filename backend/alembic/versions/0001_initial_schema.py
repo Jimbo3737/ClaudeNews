@@ -59,6 +59,7 @@ def upgrade() -> None:
         sa.Column("raw_html", sa.Text(), nullable=True),
         sa.Column("clean_text", sa.Text(), nullable=True),
         sa.Column("summary", sa.Text(), nullable=True),
+        sa.Column("why_it_matters", sa.Text(), nullable=True),
         sa.Column("read_time_minutes", sa.Integer(), nullable=True),
         sa.Column("status", sa.String(16), nullable=False, server_default="unread"),
         sa.Column("is_saved", sa.Boolean(), nullable=False, server_default=sa.false()),
