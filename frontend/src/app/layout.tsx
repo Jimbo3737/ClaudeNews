@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import { Sidebar } from "@/components/Sidebar";
+import { MiniPlayer } from "@/components/MiniPlayer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -25,6 +26,7 @@ export default function RootLayout({
         <main className="flex-1 flex flex-col overflow-hidden">
           {children}
         </main>
+        <MiniPlayer />
       </body>
     </html>
   );
