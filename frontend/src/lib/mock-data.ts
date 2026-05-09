@@ -1,25 +1,12 @@
 // Shared mock fixtures so the design pass uses consistent content
 // across Today / Reading / Topics / Listen / Library / Notes.
-// Replaced by real API calls in Phase 2.
+// Pages fall back to these when the backend isn't reachable.
 
-export type ArticleSourceKind = "rss" | "newsletter" | "saved" | "suggested";
+import type { Article, ArticleSourceKind } from "./api";
 
-export interface MockArticle {
-  id: string;
-  title: string;
-  source: string;
-  sourceKind: ArticleSourceKind;
-  summary?: string;
-  imageUrl?: string;
-  url: string;
-  publishedAt: string;
-  readTimeMinutes: number;
-  readProgress?: number; // 0..1
-  isRead: boolean;
-  isSaved: boolean;
-  tags: string[];
-  whyItMatters?: string; // for the Today brief
-}
+// Re-exports kept so the rest of the app can import either name.
+export type { Article, ArticleSourceKind };
+export type MockArticle = Article;
 
 export interface MockTopic {
   slug: string;

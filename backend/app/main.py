@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.routers import articles, sources, notes, library, bookmarks, digest, auth
+from app.routers import articles, sources, notes, library, bookmarks, digest, auth, ingest
 
 app = FastAPI(title="ClaudeNews API", version="0.1.0")
 
@@ -20,6 +20,7 @@ app.include_router(notes.router, prefix="/api/notes", tags=["notes"])
 app.include_router(library.router, prefix="/api/library", tags=["library"])
 app.include_router(bookmarks.router, prefix="/api/bookmarks", tags=["bookmarks"])
 app.include_router(digest.router, prefix="/api/digest", tags=["digest"])
+app.include_router(ingest.router, prefix="/api/ingest", tags=["ingest"])
 
 
 @app.get("/health")

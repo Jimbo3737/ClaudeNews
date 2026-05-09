@@ -14,14 +14,16 @@ import { TopBar } from "@/components/TopBar";
 import { ArticleCard, type Article } from "@/components/ArticleCard";
 import { ArticleListRow } from "@/components/ArticleListRow";
 import { ReaderPane } from "@/components/ReaderPane";
-import { MOCK_ARTICLES } from "@/lib/mock-data";
+import { DemoBanner } from "@/components/DemoBanner";
+import { useArticles } from "@/lib/use-articles";
+import { articlesApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 type Tab = "inbox" | "saved" | "archive";
 type Density = "magazine" | "list" | "title";
 
 export default function ReadingPage() {
-  const [articles, setArticles] = useState<Article[]>(MOCK_ARTICLES);
+  const { articles, setArticles, isDemo } = useArticles({ limit: 100 });
   const [tab, setTab] = useState<Tab>("inbox");
   const [density, setDensity] = useState<Density>("magazine");
   const [tag, setTag] = useState<string | null>(null);
@@ -44,10 +46,17 @@ export default function ReadingPage() {
 
   function toggleSave(id: string) {
     setArticles((prev) => prev.map((a) => (a.id === id ? { ...a, isSaved: !a.isSaved } : a)));
+    if (!isDemo) {
+      articlesApi.toggleSave(id).catch(() => {
+        // Revert on failure
+        setArticles((prev) => prev.map((a) => (a.id === id ? { ...a, isSaved: !a.isSaved } : a)));
+      });
+    }
   }
   function open(article: Article) {
     setArticles((prev) => prev.map((a) => (a.id === article.id ? { ...a, isRead: true } : a)));
     setSelected(article);
+    if (!isDemo) articlesApi.markRead(article.id).catch(() => {});
   }
 
   const counts = {
@@ -95,6 +104,8 @@ export default function ReadingPage() {
           </div>
         }
       />
+
+      <DemoBanner show={isDemo} />
 
       <div className="flex flex-1 overflow-hidden">
         <div className="flex-1 flex flex-col overflow-hidden">

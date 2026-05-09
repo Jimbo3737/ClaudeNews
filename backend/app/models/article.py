@@ -20,6 +20,11 @@ class Article(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     source_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("sources.id", ondelete="SET NULL"))
 
+    # External provider id (e.g. Gmail message id, RSS guid). Together with external_source
+    # this gives us a stable dedup key for ingested-from-elsewhere articles.
+    external_id: Mapped[str | None] = mapped_column(String(256))
+    external_source: Mapped[str | None] = mapped_column(String(32))
+
     url: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
     title: Mapped[str] = mapped_column(String(512), nullable=False)
     author: Mapped[str | None] = mapped_column(String(256))

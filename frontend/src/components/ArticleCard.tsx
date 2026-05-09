@@ -19,6 +19,7 @@ const SOURCE_KIND_ICON: Record<ArticleSourceKind, React.ComponentType<{ size?: n
   newsletter: Mail,
   saved: Bookmark,
   suggested: Sparkles,
+  manual: Bookmark,
 };
 
 const SOURCE_KIND_LABEL: Record<ArticleSourceKind, string> = {
@@ -26,6 +27,7 @@ const SOURCE_KIND_LABEL: Record<ArticleSourceKind, string> = {
   newsletter: "Newsletter",
   saved: "Saved by you",
   suggested: "Suggested",
+  manual: "Saved by you",
 };
 
 export function ArticleCard({ article, size = "md", onClick, onSave }: ArticleCardProps) {

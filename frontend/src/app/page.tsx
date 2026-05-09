@@ -15,15 +15,17 @@ import { TopBar } from "@/components/TopBar";
 import { ArticleCard, type Article } from "@/components/ArticleCard";
 import { ArticleListRow } from "@/components/ArticleListRow";
 import { ReaderPane } from "@/components/ReaderPane";
+import { DemoBanner } from "@/components/DemoBanner";
+import { useArticles } from "@/lib/use-articles";
+import { articlesApi } from "@/lib/api";
 import {
-  MOCK_ARTICLES,
   MOCK_LIBRARY,
   MOCK_PODCASTS,
   TODAY_BRIEF_IDS,
 } from "@/lib/mock-data";
 
 export default function TodayPage() {
-  const [articles, setArticles] = useState<Article[]>(MOCK_ARTICLES);
+  const { articles, setArticles, isDemo } = useArticles({ limit: 50 });
   const [selected, setSelected] = useState<Article | null>(null);
 
   const today = new Date().toLocaleDateString("en-GB", {
@@ -46,12 +48,20 @@ export default function TodayPage() {
     setArticles((prev) =>
       prev.map((a) => (a.id === id ? { ...a, isSaved: !a.isSaved } : a))
     );
+    if (!isDemo) {
+      articlesApi.toggleSave(id).catch(() => {
+        setArticles((prev) =>
+          prev.map((a) => (a.id === id ? { ...a, isSaved: !a.isSaved } : a))
+        );
+      });
+    }
   }
   function open(article: Article) {
     setArticles((prev) =>
       prev.map((a) => (a.id === article.id ? { ...a, isRead: true } : a))
     );
     setSelected(article);
+    if (!isDemo) articlesApi.markRead(article.id).catch(() => {});
   }
 
   const inProgressLibrary = MOCK_LIBRARY.filter((l) => l.status === "in_progress");
@@ -60,6 +70,8 @@ export default function TodayPage() {
   return (
     <>
       <TopBar title="Today" subtitle={today} />
+
+      <DemoBanner show={isDemo} />
 
       <div className="flex flex-1 overflow-hidden">
         <div className="flex-1 overflow-y-auto">
